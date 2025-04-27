@@ -1,9 +1,0 @@
-{
-    "bot_token": "<your telegram bot token>",
-    "chat_id": = "<your telegram chat id>",
-    "user_name": = "<your human name>",
-    "msg_1_deadline_hrs": "<the number of hours to wait after the first message>",
-    "msg_2_deadline_hrs": "<the number of hours to wait after the second message>",
-    "gmail_user": "<the gmail address from which to send the email>",
-    "dest_email": "<the email address to which the email will be send>"
-}
