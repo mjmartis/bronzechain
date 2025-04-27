@@ -1,3 +1,5 @@
+''' Mostly AI generated. '''
+
 import json
 import asyncio
 import logging
@@ -23,7 +25,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class ReminderBot:
+class Bronzechain:
     # Message and email templates.
     MSG_1_TEXT = 'Respond with any message to confirm that you are well'
     MSG_2_TEXT = 'FINAL ATTEMPT: respond with any message to confirm that you are well'
@@ -150,7 +152,7 @@ async def main():
     parser.add_argument('--config', type=str, default='bronzechain.json')
     args = parser.parse_args()
     
-    bot = ReminderBot(args.config)
+    bot = Bronzechain(args.config)
     await bot.run()
 
 if __name__ == '__main__':
