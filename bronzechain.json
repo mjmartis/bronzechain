@@ -4,6 +4,7 @@
     "user_name": "<your human name>",
     "msg_1_deadline_hrs": 1,
     "msg_2_deadline_hrs": 1,
-    "gmail_user": "<your source gmail address>",
-    "dest_email": "<the destination email address>"
+    "email_token": "<your email service authorisation token>",
+    "email_service_url": "<the endpoint for your email service>",
+    "dest_email": "<your recipient email address>"
 }
