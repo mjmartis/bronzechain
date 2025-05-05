@@ -3,20 +3,11 @@
 import json
 import asyncio
 import logging
-import base64
 import argparse
 
-from email.message import EmailMessage
+import aiohttp
 
 from telegram.ext import Application
-
-import google.auth
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-
-OAUTH_TOKEN_FILE = 'token.json'
-OAUTH_SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
 # Set up logging.
 logging.basicConfig(
@@ -40,29 +31,13 @@ class Bronzechain:
         self.chat_id = config['chat_id']
         self.msg_1_deadline_sec = config['msg_1_deadline_hrs'] * 3600
         self.msg_2_deadline_sec = config['msg_2_deadline_hrs'] * 3600
+        self.email_service_url = config['email_service_url']
+        self.email_token = config['email_token']
         self.user_name = config['user_name']
-        self.user_email = config['gmail_user']
         self.dest_email = config['dest_email']
         
         # Initialize Telegram bot.
         self.app = Application.builder().token(self.bot_token).build()
-
-        # Setup Gmail access.
-        self.gmail_service = None
-        try:
-            creds = Credentials.from_authorized_user_file(OAUTH_TOKEN_FILE, OAUTH_SCOPES)
-
-            # Automatically refresh and persist creds if we can.
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-                with open(OAUTH_TOKEN_FILE, 'w') as token_file:
-                    token_file.write(creds.to_json())
-
-            if creds and creds.valid:
-                self.gmail_service = build('gmail', 'v1', credentials=creds)
-        except Exception as e:
-            self.gmail_service = None
-
     
     async def send_message(self, text):
         ''' Send a message to the configured chat ID. '''
@@ -78,21 +53,22 @@ class Bronzechain:
             return updates[-1]
         return None
     
-    def send_email(self, subject, body):
-        ''' Send an email using Gmail. '''
+    async def send_email(self, dest_email, subject, body):
+        '''
+        Send an email using a Pipedream pipeline. This allows us to forgo manual management
+        of long-lived Gmail OAuth.
+        '''
 
-        assert self.gmail_service is not None
+        headers = { 'Authorization': f'Bearer {self.email_token}' }
+        body = {
+            'dest_email': dest_email,
+            'subject': subject,
+            'body': body
+        }
 
-        message = EmailMessage()
-        message.set_content(body)
-        message['To'] = self.dest_email
-        message['From'] = self.user_email
-        message['Subject'] = subject
-
-        encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-
-        create_message = {'raw': encoded_message}
-        self.gmail_service.users().messages().send(userId='me', body=create_message).execute()
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.post(self.email_service_url, data=body) as response:
+              response.raise_for_status()
     
     async def run(self):
         ''' Run the main bot logic. '''
@@ -141,7 +117,7 @@ class Bronzechain:
             total_hours = int(round((self.msg_1_deadline_sec + self.msg_2_deadline_sec) / 3600))
             subject = self.EMAIL_SUBJECT.format(self.user_name)
             body = self.EMAIL_BODY.format(self.user_name, total_hours)
-            self.send_email(subject, body)
+            await self.send_email(self.dest_email, subject, body)
             
         except Exception as e:
             logger.error(f'Error in bot execution: {str(e)}')
